@@ -1,1 +1,97 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
 
+#include "Index.h" //HTML page 
+
+const char* ssid = "/*wifi-ssid*/";  
+const char* password = "/*wifi-password*/"; 
+
+ESP8266WebServer server(80);  
+
+const long MeanwhileGetHeartRate = 10; 
+const long MeanwhileHeartRate = 10000; 
+
+unsigned long LastMillisecondsGetHeartRate = 0;
+unsigned long LastMillisecondsHeartRate = 0; 
+
+int cntHB = 0; 
+boolean ThresholdStat = true; 
+int Finalval = 0; 
+
+const int SensorWire = A0; 
+int Threshold = 600;
+
+void InitializeHTML() {
+ String s = MAIN_page; //Read things from HTML
+ server.send(200, "text/html", s); //Send command for web
+}
+
+
+void InitializeHeartRate() {
+  String FinalvalSend = String(Finalval); 
+  server.send(200, "text/plane", FinalvalSend); //Sending BPM values
+}
+
+void GetHeartRate() {
+  //----------------------------------------Process of reading heart rate.
+  unsigned long currentMillisGetHR = millis();
+
+  if (currentMillisGetHR - LastMillisecondsGetHeartRate >= MeanwhileGetHeartRate) {
+    LastMillisecondsGetHeartRate = currentMillisGetHR;
+
+    int PulseSensorHRVal = analogRead(SensorWire);
+
+    if (PulseSensorHRVal > Threshold && ThresholdStat == true) {
+      cntHB++;
+      ThresholdStat = false;
+    }
+
+    if (PulseSensorHRVal < Threshold) {
+      ThresholdStat = true;
+    }
+  }
+ 
+  unsigned long currentMillisHR = millis();
+
+  if (currentMillisHR - LastMillisecondsHeartRate >= MeanwhileHeartRate) {
+    LastMillisecondsHeartRate = currentMillisHR;
+
+    Finalval = cntHB * 6; //--> The taken heart rate is for 10 seconds. So to get the BPM value, the total heart rate in 10 seconds x 6.
+    Serial.print("BPM : ");
+    Serial.println(Finalval);
+    
+    cntHB = 0;
+  }
+  
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password); 
+  Serial.println("");
+  Serial.print("In process of connecting to");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.print("Connection established with : ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+  server.on("/", InitializeHTML); 
+  server.on("/getHeartRate", InitializeHeartRate); 
+  server.begin(); //--> Start server
+  Serial.println("HTTP server started");
+
+  Serial.println();
+  Serial.println("Please wait 10 seconds to get the BPM Value");
+}
+
+void loop() {
+  server.handleClient();
+  GetHeartRate(); }
