@@ -1,1 +1,140 @@
+#include <SoftwareSerial.h>
+#include <LiquidCrystal_I2C.h>
+#include <PulseSensorPlayground.h>
+#define USE_ARDUINO_INTERRUPTS true 
 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+SoftwareSerial mySerial(9,10);
+SoftwareSerial ss(4, 3);
+float sensorValue;
+int AlcoholPin=4;
+int BuzzerPin=5;
+const int PulseWire = 0;
+int Threshold = 600;
+
+PulseSensorPlayground pulseSensor;
+
+void setup()
+{
+  ss.begin(9600);
+  mySerial.begin(9600);   // Setting the baud rate of GSM Module  
+  Serial.begin(9600);// Setting the baud rate of Serial Monitor (Arduino)
+  lcd.begin(16,2);
+  lcd.init();
+  lcd.backlight();
+  pulseSensor.analogInput(PulseWire);
+  pulseSensor.setThreshold(Threshold);
+  pinMode(BuzzerPin,OUTPUT);
+  Serial.println("Driver Ale");
+  if (pulseSensor.begin()) {
+    Serial.println("We created a pulseSensor Object !"); //This prints one time at Arduino power-up, or on Arduino reset.
+    lcd.setCursor(0,0);
+    lcd.print(" Heart Rate Monitor");
+    lcd.clear();
+ 
+}
+}
+
+void loop()
+{
+byte gpsData = ss.read();
+    Serial.write(gpsData);
+  
+  int Finalval = pulseSensor.getBeatsPerMinute();
+  Serial.println("♥ A HeartBeat Happened ! "); 
+  Serial.print("BPM: "); 
+  Serial.println(Finalval); 
+  if(Finalval<250)
+    {
+    
+      Serial.println("High Heart Beat");
+      lcd.setCursor(0,0);
+      lcd.print("Beats Per Minute");
+      lcd.setCursor(3,1);
+      lcd.print("are normal");
+    }
+
+  if(Finalval>10){
+      Serial.println("High Heart Beat");
+      lcd.setCursor(0,0);
+      lcd.print("Beats Per Minute");
+      lcd.setCursor(3,1);
+      lcd.print("are normal");
+    }
+
+  if(Finalval<10){
+      lcd.setCursor(0,0);
+      lcd.print("Visit a hospital");
+      lcd.setCursor(2,1);
+      lcd.print("Unstable BPM");
+      delay(2000);
+      digitalWrite(BuzzerPin, HIGH);
+      delay(1000);
+      digitalWrite(BuzzerPin, LOW);
+      mySerial.write("ATD+919535177004;\r\n");
+      delay(20000);
+      mySerial.write("ATH\r\n");
+      SendMessage();  
+    }
+
+  if(Finalval>250){
+      lcd.setCursor(0,0);
+      lcd.print("Visit a hospital");
+      lcd.setCursor(2,1);
+      lcd.print("Unstable BPM");
+      delay(2000);
+      digitalWrite(BuzzerPin, HIGH);
+      delay(1000);
+      digitalWrite(BuzzerPin, LOW);
+      mySerial.write("ATD+919535177004;\r\n");
+      delay(20000);
+      mySerial.write("ATH\r\n");
+      SendMessage();  
+    }
+    
+   AlcoholPin = digitalRead;
+  sensorValue= analogRead(1);
+  if (sensorValue > 200)
+   {
+    Serial.println("Driver:");
+    Serial.print(sensorValue);
+    Serial.println("Driver Drunk");
+    delay(2000);
+    digitalWrite(BuzzerPin, HIGH);
+    delay(1000);
+    digitalWrite(BuzzerPin, LOW);
+    mySerial.write("ATD+919535177004;\r\n");
+    delay(20000);
+    mySerial.write("ATH\r\n");
+    SendMessage1();  
+  }
+}
+
+
+void SendMessage()
+{
+  mySerial.println("AT+CMGF=1");    //Sets the GSM Module in Text Mode
+  delay(1000);  // Delay of 1000 milli seconds or 1 second
+
+  mySerial.println("AT+CMGS=\"+919535177004\"\r"); // Replace x with mobile number
+  delay(1000);
+
+  mySerial.println("Heart Beat Issue");// The SMS text you want to send
+  delay(100);
+   mySerial.println((char)26);// ASCII code of CTRL+Z
+  delay(1000);
+}
+
+void SendMessage1()
+{
+  mySerial.println("AT+CMGF=1");    //Sets the GSM Module in Text Mode
+  delay(1000);  // Delay of 1000 milli seconds or 1 second
+
+  mySerial.println("AT+CMGS=\"+919535177004\"\r"); // Replace x with mobile number
+  delay(1000);
+
+  mySerial.println("Driver Drunk",gpsData);// The SMS text you want to send
+  delay(100);
+   mySerial.println((char)26);// ASCII code of CTRL+Z
+  delay(1000);
+}
