@@ -1,1 +1,89 @@
-
+const char MAIN_page[] PROGMEM = R"=====(
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Monitoring Heart Rate (HeartBeat)</title>
+    <style>
+      html {
+        font-family: Arial;
+        display: inline-block;
+        margin: 0px auto;
+        text-align: center;
+      }
+      h1 { font-size: 1.5rem; }
+    </style>
+  </head>
+  
+  <body> 
+    <h1 style="color:#7d0633;font-family:consolas;">Monitoring Heart Rate (HeartBeat) with Pulse Heart Rate Sensor and NodeMCU ESP12E ESP8266</h1>
+    <img src="https://cdn.pixabay.com/photo/2018/04/12/04/26/blood-pressure-3312513__340.png"/>
+    <br>
+    <canvas id="myCanvas" width="500" height="200"></canvas>
+    <p>Min = 0 &nbsp;&nbsp;&nbsp; Max = 220</p>
+    <p>Please wait 10 seconds to get the BPM Value</p>
+    
+    <script>
+      var myVar = setInterval(myTimer, 1000); 
+      var getHR = 0; 
+      
+      function myTimer() {
+        getHeartRateVal();
+      }
+      
+      function getHeartRateVal() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            getHR = this.responseText;
+          }
+        };
+        xhttp.open("GET", "getHeartRate", true);
+        xhttp.send();
+      }
+      
+      var canvas = document.getElementById('myCanvas');
+      var context = canvas.getContext('2d');
+      var start=1.58;
+      var cw=context.canvas.width/2;
+      var ch=context.canvas.height/2;
+      var diff;
+       
+      var cnt = 0;
+      var bar=setInterval(progressBar,10);
+      function progressBar(){
+        var HR = map(getHR,0,220,0,100);
+        diff=(cnt/100)*Math.PI*2;
+        context.clearRect(0,0,400,200);
+        context.beginPath();
+        context.arc(cw,ch,70,0,2*Math.PI,false);
+        context.fillStyle='#FFF';
+        context.fill();
+        context.strokeStyle='#e7f2ba';
+        context.stroke();
+        context.fillStyle='#000';
+        context.strokeStyle='#b3cf3c';
+        context.textAlign='center';
+        context.lineWidth=15;
+        context.font = '15pt Verdana';
+        context.beginPath();
+        context.arc(cw,ch,70,start,diff+start,false);
+        context.stroke();
+        context.fillText(getHR+' BPM',cw+2,ch+6);
+        
+        if(cnt<HR) {
+          cnt++;
+        }
+                
+        if(cnt>HR) {
+          cnt--;
+        }
+      }
+      
+      function map( x,  in_min,  in_max,  out_min,  out_max){
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+      }
+    </script>
+  </body>
+</html>
+)=====";
